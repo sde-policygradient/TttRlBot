@@ -165,29 +165,7 @@ double* calculateNetworkOutput(NeuralNetwork *network, const double inputs[], co
 }
 
 void backpropagate(NeuralNetwork *network, const double inputs[], const double outputs[], const double expectedOutputs[], activation_t activationFunc){
-    const int size = network->size;
-    const int outLayerSize = network->layers[size - 1].outputs;
-    const int numOutputs = network->layers[size - 1].outputs;
-    double *costActivationGradients = (double*)calloc(outLayerSize, sizeof(double));
-
-    {
-        const double gradientCoefficient = 2 / numOutputs;
-
-        for(int i = 0; i < numOutputs; i++){
-            costActivationGradients[i] = gradientCoefficient * (outputs[i] - expectedOutputs[i]);
-        }
-    }
-
-    for(int i = network->size - 1; i > 0; i--){
-        Layer *currentLayer = &network->layers[i];
-        Layer *prevLayer = &network->layers[i + 1];
-
-        for(int j = 0; j < currentLayer->outputs; j++){
-            double costActivationGradient = 0;
-            const double rawOutput = calculateNetworkOutput(network, inputs, i + 1, activationFunc)[j];
-            const double activationBiasGradient = derivative(activationFunc, rawOutput);
-        }
-    }
+    return;
 }
 
 int selectRandomOutput(const double numbers[], const int size){

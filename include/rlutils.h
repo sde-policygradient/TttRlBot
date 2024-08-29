@@ -37,9 +37,9 @@ NeuralNetwork* loadNetwork(const char* filename);
 
 double* calculateLayerOutput(Layer *layer, const double inputs[], activation_t activationFunc);
 
-double* calculateNetworkOutput(NeuralNetwork *network, const double inputs[], activation_t activationFunc);
+double* calculateNetworkOutput(NeuralNetwork *network, const double inputs[], const int networkSize, activation_t activationFunc);
 
-void backpropagate(NeuralNetwork *network, const double outputs[], const double expectedOutputs[], activation_t activationFunc);
+void backpropagate(NeuralNetwork *network, const double inputs[], const double outputs[], const double expectedOutputs[], activation_t activationFunc);
 
 int selectRandomOutput(const double numbers[], const int size);
 

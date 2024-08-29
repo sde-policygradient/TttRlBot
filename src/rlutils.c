@@ -37,10 +37,15 @@ NeuralNetwork* createNetwork(const int size, const int layerSizes[]){
     for(int i = 0; i < size; i++){
         Layer *currentLayer = &network->layers[i];
 
-        currentLayer->inputs = !i?layerSizes[i]:layerSizes[i - 1];
-        currentLayer->outputs = layerSizes[i];
-        currentLayer->weights = (double*)calloc(currentLayer->inputs * currentLayer->outputs, sizeof(double));
-        currentLayer->biases = (double*)calloc(currentLayer->outputs, sizeof(double));
+        {
+            currentLayer->inputs = !i?layerSizes[i]:layerSizes[i - 1];
+            currentLayer->outputs = layerSizes[i];
+        }
+
+        {
+            currentLayer->weights = (double*)calloc(currentLayer->inputs * currentLayer->outputs, sizeof(double));
+            currentLayer->biases = (double*)calloc(currentLayer->outputs, sizeof(double));
+        }
     }
 
     return network;
@@ -74,6 +79,13 @@ void freeNetwork(NeuralNetwork *network){
     free(network);
 }
 
+static void saveLayer(const Layer layer, FILE *file){
+    fwrite(&layer.inputs, sizeof(int), 1, file);
+    fwrite(&layer.outputs, sizeof(int), 1, file);
+    fwrite(layer.weights, sizeof(double), layer.inputs * layer.outputs, file);
+    fwrite(layer.biases, sizeof(double), layer.outputs, file);
+}
+
 void saveNetwork(NeuralNetwork *network, const char *filename){
     FILE *file = fopen(filename, "wb");
 
@@ -85,15 +97,18 @@ void saveNetwork(NeuralNetwork *network, const char *filename){
     fwrite(&network->size, sizeof(int), 1, file);
 
     for(int i = 0; i < network->size; i++){
-        Layer *currentLayer = &network->layers[i];
-
-        fwrite(&currentLayer->inputs, sizeof(int), 1, file);
-        fwrite(&currentLayer->outputs, sizeof(int), 1, file);
-        fwrite(currentLayer->weights, sizeof(double), currentLayer->inputs * currentLayer->outputs, file);
-        fwrite(currentLayer->biases, sizeof(double), currentLayer->outputs, file);
+        saveLayer(network->layers[i], file);
     }
 
     fclose(file);
+}
+
+static void loadLayer(Layer *layer, const int weightSize, const int biasSize, FILE *file){
+    layer->weights = (double*)calloc(weightSize, sizeof(double));
+    layer->biases = (double*)calloc(biasSize, sizeof(double));
+
+    fread(layer->weights, sizeof(double), weightSize, file);
+    fread(layer->biases, sizeof(double), biasSize, file);
 }
 
 NeuralNetwork* loadNetwork(const char* filename){
@@ -114,20 +129,18 @@ NeuralNetwork* loadNetwork(const char* filename){
 
     for(int i = 0; i < size; i++){
         Layer *currentLayer = &network->layers[i];
-        int weightSize;
-        int biasSize;
 
-        fread(&currentLayer->inputs, sizeof(int), 1, file);
-        fread(&currentLayer->outputs, sizeof(int), 1, file);
+        {
+            fread(&currentLayer->inputs, sizeof(int), 1, file);
+            fread(&currentLayer->outputs, sizeof(int), 1, file);
+        }
 
-        weightSize = currentLayer->inputs * currentLayer->outputs;
-        biasSize = currentLayer->outputs;
+        {
+            const int weightSize = currentLayer->inputs * currentLayer->outputs;
+            const int biasSize = currentLayer->outputs;
 
-        currentLayer->weights = (double*)calloc(weightSize, sizeof(double));
-        currentLayer->biases = (double*)calloc(biasSize, sizeof(double));
-
-        fread(currentLayer->weights, sizeof(double), weightSize, file);
-        fread(currentLayer->biases, sizeof(double), biasSize, file);
+            loadLayer(currentLayer, weightSize, biasSize, file);
+        }
     }
 
     fclose(file);

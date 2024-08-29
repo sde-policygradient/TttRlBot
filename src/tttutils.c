@@ -32,7 +32,7 @@ bool playMove(char board[3][3], int row, int column, char symbol){
     return true;
 }
 
-char checkWin(char board[3][3]){
+static char checkWin(char board[3][3]){
     char symbol;
     int symbolCount = 0;
 
@@ -102,7 +102,7 @@ char checkWin(char board[3][3]){
         return symbol;
 }
 
-bool checkDraw(char board[3][3]){
+static bool checkDraw(char board[3][3]){
     bool draw = true;
 
     for(int i = 0; i < 3; i++){

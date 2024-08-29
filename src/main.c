@@ -134,7 +134,7 @@ int main(int argc, char **argv){
 
             symbolsToValues(board, boardState);
 
-            networkMove = selectRandomOutput(calculateNetworkOutput(network, boardState, swish), 9);
+            networkMove = selectRandomOutput(calculateNetworkOutput(network, boardState, network->size, swish), 9);
             row = networkMove % 3;
             column = networkMove / 3;
 

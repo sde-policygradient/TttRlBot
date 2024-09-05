@@ -55,7 +55,7 @@ For example:
     - 'make'
 
 2. For execution:
-    - 
+    - None
 
 ### 4. License
 The project is licensed under the MIT License. See [LICENSE](LICENSE.txt) for further information.

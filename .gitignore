@@ -2,5 +2,6 @@ build
 obj
 lib
 .vscode
-Makefile
-testDir
+test*
+*.conf
+core

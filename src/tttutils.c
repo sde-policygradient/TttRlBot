@@ -2,7 +2,7 @@
 #include<stdio.h>
 #include<stdbool.h>
 
-void clearBoard(char board[3][3]){
+void clear_board(char board[3][3]){
     for(int i = 0; i < 3; i++){
         for(int j = 0; j < 3; j++){
             board[i][j] = ' ';
@@ -10,7 +10,7 @@ void clearBoard(char board[3][3]){
     }
 }
 
-void drawBoard(char board[3][3]){
+void draw_board(char board[3][3]){
     for(int i = 0; i < 7; i++){
         if(!(i % 2)){
             printf("-------\n");
@@ -23,18 +23,18 @@ void drawBoard(char board[3][3]){
     }
 }
 
-bool playMove(char board[3][3], int row, int column, char symbol){
-    char *targetSqare = &board[row][column];
+bool play_move(char board[3][3], int row, int column, char symbol){
+    char *target_sqare = &board[row][column];
 
-    if(*targetSqare != ' ')return false;
+    if(*target_sqare != ' ')return false;
 
-    *targetSqare = symbol;
+    *target_sqare = symbol;
     return true;
 }
 
-static char checkWin(char board[3][3]){
+static char check_win(char board[3][3]){
     char symbol;
-    int symbolCount = 0;
+    int symbol_count = 0;
 
     for(int i = 0; i < 3; i++){
         symbol = board[i][0];
@@ -43,14 +43,14 @@ static char checkWin(char board[3][3]){
 
         for(int j = 1; j < 3; j++){
             if(board[i][j] != symbol){
-                symbolCount = 0;
+                symbol_count = 0;
                 break;
             }
 
-            symbolCount++;
+            symbol_count++;
         }
 
-        if(symbolCount >= 2)goto win;
+        if(symbol_count >= 2)goto win;
     }
 
     for(int i = 0; i < 3; i++){
@@ -60,41 +60,41 @@ static char checkWin(char board[3][3]){
 
         for(int j = 1; j < 3; j++){
             if(board[j][i] != symbol){
-                symbolCount = 0;
+                symbol_count = 0;
                 break;
             }
 
-            symbolCount++;
+            symbol_count++;
         }
 
-        if(symbolCount >= 2)goto win;
+        if(symbol_count >= 2)goto win;
     }
 
     symbol = board[0][0];
 
     for(int i = 1; i < 3; i++){
         if(board[i][i] != symbol || symbol == ' '){
-            symbolCount = 0;
+            symbol_count = 0;
             break;
         }
 
-        symbolCount++;
+        symbol_count++;
     }
 
-    if(symbolCount >= 2)goto win;
+    if(symbol_count >= 2)goto win;
 
     symbol = board[2][0];
 
     for(int i = 1; i < 3; i++){
         if(board[2 - i][i] != symbol || symbol == ' '){
-            symbolCount = 0;
+            symbol_count = 0;
             break;
         }
 
-        symbolCount++;
+        symbol_count++;
     }
 
-    if(symbolCount >= 2)goto win;
+    if(symbol_count >= 2)goto win;
 
     return ' ';
 
@@ -102,7 +102,7 @@ static char checkWin(char board[3][3]){
         return symbol;
 }
 
-static bool checkDraw(char board[3][3]){
+static bool check_draw(char board[3][3]){
     bool draw = true;
 
     for(int i = 0; i < 3; i++){
@@ -118,11 +118,11 @@ static bool checkDraw(char board[3][3]){
 }
 
 char evaluate(char board[3][3]){
-    char win = checkWin(board);
+    char win = check_win(board);
 
     if(win != ' ')return win;
 
-    if(checkDraw(board))return '=';
+    if(check_draw(board))return '=';
 
     return ' ';
 }

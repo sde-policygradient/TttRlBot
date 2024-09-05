@@ -4,9 +4,9 @@
 #include<stdio.h>
 #include<stdbool.h>
 
-void clearBoard(char board[3][3]);
-void drawBoard(char board[3][3]);
-bool playMove(char board[3][3], int row, int column, char symbol);
+void clear_board(char board[3][3]);
+void draw_board(char board[3][3]);
+bool play_move(char board[3][3], int row, int column, char symbol);
 char evaluate(char board[3][3]);
 
 #endif

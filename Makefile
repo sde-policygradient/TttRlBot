@@ -53,12 +53,10 @@ $(addprefix build_, $(LIBNAMES)): build_%: %.o
 	$(CC) $(CFLAGS) $(OBJ)/$< -o $(LIB)/lib$*.$($(LIBEXT)) -shared -fPIC -Iinclude
 
 build_all_libs: $(addprefix build_, $(LIBNAMES))
-	@sudo mkdir /usr/lib/$(PROJECTNAME) 2> /dev/null;\
-	sudo cp $(LIB)/* /usr/lib/$(PROJECTNAME)
 
 build_$(MAIN): $(MAIN).o build_all_libs
 	@echo "Building $(MAIN)"
-	$(CC) $(CFLAGS) $(OBJ)/$(MAIN).o -o $(BUILD)/$(MAIN).$($(MAINEXT)) -L$(LIB) -I$(INCLUDE) $(addprefix $(LIB)/lib, $(addsuffix .$(LIBEXTSAVE), $(LIBNAMES))) $(LDLIST)
+	$(CC) $(CFLAGS) $(OBJ)/$(MAIN).o -o $(BUILD)/$(MAIN).$($(MAINEXT)) -L$(LIB) -I$(INCLUDE) $(addprefix -l, $(LIBNAMES)) $(LDLIST)
 
 run: build_$(MAIN)
 	echo "Running $(MAIN)" && \

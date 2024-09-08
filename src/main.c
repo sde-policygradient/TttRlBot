@@ -27,40 +27,38 @@
 
 const int default_layer_sizes[] = {9, 12, 16, 16, 12, 9};
 
-void symbols_to_values(const char board[3][3], double out[9]){
-    #pragma omp parallel for
+float symbol_to_value(const char symbol){
+    const char symbols_to_check[] = {'X', 'O', ' '};
     
+    for(int i = 0; i < sizeof(symbols_to_check); i++){
+        if(symbol != symbols_to_check[i])continue;
+
+        return i;
+    }
+
+    return -1;
+}
+
+void symbols_to_values(const char board[3][3], double out[9]){
     for(int i = 0; i < 9; i++){
-        switch(board[i / 3][i % 3]){
-            case ' ':
-                out[i] = 1.0;
-                break;
-            case 'X':
-                out[i] = 0.0;
-                break;
-            case 'O':
-                out[i] = 0.5;
-                break;
-        }
+        out[i] = symbol_to_value(board[i / 3][i % 3]) * 0.5;
     }
 }
 
-int log_to_file(const char *path, const char *message){
-    FILE *log_file = fopen(path, "a");
+int log_to_file(const char *path, const char *message, int *error_code){
+    FILE *log_file;
 
-    if(!log_file)return 1;
+    CHECKED_FOPEN(log_file, path, "a", error_code);
 
     fprintf(log_file, "%s\n", message);
 
-    fclose(log_file);
+    CHECKED_FCLOSE(log_file, error_code);
 
     return 0;
 }
 
 int check_options(const int argc, char **argv, char **options_to_check, char **contains_options, int num_options_to_check){
     int prefix_lengths[num_options_to_check];
-
-    #pragma omp parallel for
 
     for(int i = 0; i < num_options_to_check; i++){
         prefix_lengths[i] = 0;
@@ -72,8 +70,6 @@ int check_options(const int argc, char **argv, char **options_to_check, char **c
         }
 
         contains_options[i] = NULL;
-
-        #pragma omp parallel for
 
         for(int j = 1; j < argc; j++){
             if(strncmp(argv[j], options_to_check[i], prefix_lengths[i]) != 0)continue;
@@ -117,7 +113,6 @@ int main(int argc, char **argv){
     int return_value = 0;
 
     char board[3][3];
-    double board_state[9];
     char *save_dir;
     bool draw = false;
     NeuralNetwork *network;
@@ -126,15 +121,11 @@ int main(int argc, char **argv){
     char evaluation;
     unsigned long iterations;
     unsigned long delay;
-    bool move_success;
-    int network_move;
-    int row;
-    int column;
-
+    
     {
         check_options(argc, argv, options_to_check, contains_options, sizeof(options_to_check) / sizeof(options_to_check[0]));
 
-        if(!contains_options[0] || !contains_options[1]){
+        if((!contains_options[0] || !contains_options[1]) || (strlen(contains_options[0]) == 0 || strlen(contains_options[1]) == 0)){
             printf("<name> <-s<save>> <-i<iterations>> <-d<delay>> [--draw]\n");
             goto free_options_array;
         }
@@ -156,7 +147,8 @@ int main(int argc, char **argv){
             goto free_options_array;
         }
 
-        save_dir = (char*)malloc((strlen(contains_options[0]) + 1) * sizeof(char));
+        CHECKED_MALLOC(save_dir, strlen(contains_options[0]) + 1, char, &return_value);
+
         strcpy(save_dir, contains_options[0]);
 
         if(contains_options[3]){
@@ -173,22 +165,27 @@ int main(int argc, char **argv){
     }
 
     if(dir_exists(save_dir)){
-        log_to_file(log, "Directory already exists");
+        log_to_file(log, "Directory already exists", &return_value);
     }else if(!MKDIR(save_dir)){
-        log_to_file(log, "Created directory");
+        log_to_file(log, "Created directory", &return_value);
     }else{
-        log_to_file(log, "Failed to create directory");
+        log_to_file(log, "Failed to create directory", &return_value);
         goto free_save_dir;
     }
 
     if(file_exists(save)){
-        network = load_network(save);
-        log_to_file(log, "Loaded network");
+        load_network(&network, save, &return_value);
+        log_to_file(log, "Loaded network", &return_value);
     }else{
-        network = create_network(DEFAULT_SIZE, default_layer_sizes);
+        create_network(&network, DEFAULT_SIZE, default_layer_sizes, &return_value);
         init_network(network);
-        log_to_file(log, "Created network");
+        log_to_file(log, "Created network", &return_value);
     }
+
+    int network_move;
+    bool move_success;
+    int row;
+    int column;
 
     clear_board(board);
 
@@ -199,25 +196,27 @@ int main(int argc, char **argv){
         }
 
         evaluation = evaluate(board);
-        move_success = false;
 
         if(evaluation != ' ')break;
 
         SLEEP(delay);
 
+        double board_state[9];
+        move_success = false;
+
+        symbols_to_values(board, board_state);
+
         for(int j = 1; !move_success; j++){
             if(j > MAX_MOVE_INPUT){
-                log_to_file(log, "Network exceeded MAX_MOVE_INPUT");
+                log_to_file(log, "Network exceeded MAX_MOVE_INPUT", &return_value);
                 goto free_save_dir;
             }
 
-            symbols_to_values(board, board_state);
-
-            network_move = select_random_output(calculate_network_output(network, board_state, network->size, swish), 9);
+            network_move = select_random_output(calculate_network_output(network, board_state, network->size, swish, &return_value), 9);
             row = network_move % 3;
             column = network_move / 3;
 
-            move_success = play_move(board, row, column, i % 2?'O':'X');
+            move_success = play_move(board, row, column, i % 2? 'O' : 'X');
         };
     }
 
@@ -230,15 +229,15 @@ int main(int argc, char **argv){
             printf("Game drawn!\n");
             break;
         default:
-            log_to_file(log, "???");
+            printf("???\n");
     }
 
-    log_to_file(log, "Network played normally");
+    log_to_file(log, "Network played normally", &return_value);
 
-    save_network(network, save);
+    save_network(network, save, &return_value);
     free_network(network);
 
-    log_to_file(log, "Saved network");
+    log_to_file(log, "Saved network", &return_value);
 
     free_save_dir:
         free(save_dir);

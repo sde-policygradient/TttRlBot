@@ -1,4 +1,5 @@
 #include"rltrain.h"
+#include"checkedfunc.h"
 #include<stdio.h>
 #include<stdlib.h>
 #include<math.h>
@@ -29,8 +30,10 @@ double swish(double in){
     return in * sigmoid(in);
 }
 
-double* calculate_layer_output(Layer *layer, const double inputs[], activation_t activation_func){
-    double *outputs = (double*)calloc(layer->outputs, sizeof(double));
+double* calculate_layer_output(Layer *layer, const double inputs[], activation_t activation_func, int *error_code){
+    double *outputs;
+
+    CHECKED_CALLOC(outputs, layer->outputs, double, error_code);
 
     for(int i = 0; i < layer->outputs; i++){
         for(int j = 0; j < layer->inputs; j++){
@@ -43,16 +46,19 @@ double* calculate_layer_output(Layer *layer, const double inputs[], activation_t
     return outputs;
 }
 
-double* calculate_network_output(NeuralNetwork *network, const double inputs[], const int network_size, activation_t activation_func){
-    double *layer_outputs = (double*)calloc(network->layers[0].inputs, sizeof(double));
+double* calculate_network_output(NeuralNetwork *network, const double inputs[], const int network_size, activation_t activation_func, int *error_code){
+    double *layer_outputs;
+
+    CHECKED_CALLOC(layer_outputs, network->layers[0].inputs, double, error_code);
 
     for(int i = 0; i < network->layers[0].inputs; i++){
         layer_outputs[i] = inputs[i];
     }
 
     for(int i = 1; i < network->size; i++){
-        layer_outputs = (double*)realloc(layer_outputs, network->layers[i].outputs);
-        layer_outputs = calculate_layer_output(&network->layers[i], layer_outputs, i?activation_func:none);
+        CHECKED_REALLOC(layer_outputs, network->layers[i].outputs, double, error_code);
+        
+        layer_outputs = calculate_layer_output(&network->layers[i], layer_outputs, i?activation_func:none, error_code);
     }
 
     return layer_outputs;

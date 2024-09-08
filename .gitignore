@@ -1,7 +1,9 @@
 build
 obj
 lib
+conf
 .vscode
 test*
 *.conf
 core
+CMakeLists.txt

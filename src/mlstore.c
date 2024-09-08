@@ -1,15 +1,18 @@
 #include"mlstore.h"
 #include"mltypes.h"
+#include"checkedfunc.h"
 #include<stdio.h>
 #include<stdlib.h>
 
-NeuralNetwork* create_network(const int size, const int layer_sizes[]){
-    NeuralNetwork *network = (NeuralNetwork*)malloc(sizeof(NeuralNetwork));
-    network->size = size;
-    network->layers = (Layer*)calloc(size, sizeof(Layer));
+void create_network(NeuralNetwork **network, const int size, const int layer_sizes[], int *error_code){
+    CHECKED_MALLOC(*network, 1, NeuralNetwork, error_code);
+
+    (*network)->size = size;
+
+    CHECKED_CALLOC((*network)->layers, size, Layer, error_code);
 
     for(int i = 0; i < size; i++){
-        Layer *current_layer = &network->layers[i];
+        Layer *current_layer = &(*network)->layers[i];
 
         {
             current_layer->inputs = !i?layer_sizes[i]:layer_sizes[i - 1];
@@ -17,12 +20,10 @@ NeuralNetwork* create_network(const int size, const int layer_sizes[]){
         }
 
         {
-            current_layer->weights = (double*)calloc(current_layer->inputs * current_layer->outputs, sizeof(double));
-            current_layer->biases = (double*)calloc(current_layer->outputs, sizeof(double));
+            CHECKED_CALLOC(current_layer->weights, current_layer->inputs * current_layer->outputs, double, error_code);
+            CHECKED_CALLOC(current_layer->biases, current_layer->outputs, double, error_code);
         }
     }
-
-    return network;
 }
 
 void init_network(NeuralNetwork *network){
@@ -53,71 +54,61 @@ void free_network(NeuralNetwork *network){
     free(network);
 }
 
-static void save_layer(const Layer layer, FILE *file){
-    fwrite(&layer.inputs, sizeof(int), 1, file);
-    fwrite(&layer.outputs, sizeof(int), 1, file);
-    fwrite(layer.weights, sizeof(double), layer.inputs * layer.outputs, file);
-    fwrite(layer.biases, sizeof(double), layer.outputs, file);
+static void save_layer(const Layer layer, FILE *file, int *error_code){
+    CHECKED_FWRITE(&layer.inputs, sizeof(int), 1, file, error_code);
+    CHECKED_FWRITE(&layer.outputs, sizeof(int), 1, file, error_code);
+    CHECKED_FWRITE(layer.weights, sizeof(double), layer.inputs * layer.outputs, file, error_code);
+    CHECKED_FWRITE(layer.biases, sizeof(double), layer.outputs, file, error_code);
 }
 
-void save_network(NeuralNetwork *network, const char *filename){
-    FILE *file = fopen(filename, "wb");
+void save_network(const NeuralNetwork *network, const char *filename, int *error_code){
+    FILE *file;
 
-    if(file == NULL){
-        perror("Can't save network");
-        return;
-    }
+    CHECKED_FOPEN(file, filename, "wb", error_code);
 
-    fwrite(&network->size, sizeof(int), 1, file);
+    CHECKED_FWRITE(&network->size, sizeof(int), 1, file, error_code);
 
     for(int i = 0; i < network->size; i++){
-        save_layer(network->layers[i], file);
+        save_layer(network->layers[i], file, error_code);
     }
 
-    fclose(file);
+    CHECKED_FCLOSE(file, error_code);
 }
 
-static void load_layer(Layer *layer, const int weight_size, const int bias_size, FILE *file){
-    layer->weights = (double*)calloc(weight_size, sizeof(double));
-    layer->biases = (double*)calloc(bias_size, sizeof(double));
+static void load_layer(Layer *layer, FILE *file, int *error_code){
 
-    fread(layer->weights, sizeof(double), weight_size, file);
-    fread(layer->biases, sizeof(double), bias_size, file);
+    CHECKED_FREAD(&layer->inputs, sizeof(int), 1, file, error_code);
+    CHECKED_FREAD(&layer->outputs, sizeof(int), 1, file, error_code);
+
+    const int weight_size = layer->inputs * layer->outputs;
+    const int bias_size = layer->outputs;
+
+    CHECKED_MALLOC(layer->weights, weight_size, double, error_code);
+    CHECKED_MALLOC(layer->biases, bias_size, double, error_code);
+
+    CHECKED_FREAD(layer->weights, sizeof(double), weight_size, file, error_code);
+    CHECKED_FREAD(layer->biases, sizeof(double), bias_size, file, error_code);
 }
 
-NeuralNetwork* load_network(const char* filename){
-    FILE *file = fopen(filename, "rb");
+void load_network(NeuralNetwork **network, const char* filename, int *error_code){
+    FILE *file;
 
-    if(file == NULL){
-        perror("Can't load network");
-        return NULL;
-    }
+    CHECKED_FOPEN(file, filename, "rb", error_code);
 
-    NeuralNetwork *network = (NeuralNetwork*)malloc(sizeof(NeuralNetwork));
+    CHECKED_MALLOC(*network, 1, NeuralNetwork, error_code);
+
     int size;
 
-    fread(&size, sizeof(int), 1, file);
+    CHECKED_FREAD(&size, sizeof(int), 1, file, error_code);
 
-    network->size = size;
-    network->layers = (Layer*)calloc(size, sizeof(Layer));
+    (*network)->size = size;
+
+    CHECKED_MALLOC((*network)->layers, size, Layer, error_code);
 
     for(int i = 0; i < size; i++){
-        Layer *current_layer = &network->layers[i];
-
-        {
-            fread(&current_layer->inputs, sizeof(int), 1, file);
-            fread(&current_layer->outputs, sizeof(int), 1, file);
-        }
-
-        {
-            const int weight_size = current_layer->inputs * current_layer->outputs;
-            const int bias_size = current_layer->outputs;
-
-            load_layer(current_layer, weight_size, bias_size, file);
-        }
+        Layer *current_layer = &(*network)->layers[i];
+        load_layer(current_layer, file, error_code);
     }
 
-    fclose(file);
-
-    return network;
+    CHECKED_FCLOSE(file, error_code);
 }

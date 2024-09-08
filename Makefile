@@ -1,10 +1,12 @@
 CFLAGS := -g -Wall -fopenmp
 LDLIST := -Wl,-lm
 INCLUDE := include
+PROJECTNAME := tttrlbot
 SRC := src
 OBJ := obj
 LIB := lib
 BUILD := build
+CONF := conf
 MAIN := main
 LIBNAMES := filecheck rltrain mlstore tttutils
 CC := gcc
@@ -13,15 +15,16 @@ LIBEXT := LIBEXTSAVE
 MAINEXT := MAINEXTSAVE
 CONFFILENAME := vars
 
-include $(CONFFILENAME).conf
+include $(CONF)/$(CONFFILENAME).conf
 
 .PHONY: setup run
 
-$(CONFFILENAME).conf:
-	touch $(CONFFILENAME).conf
+$(CONF)/$(CONFFILENAME).conf:
+	touch $(CONF)/$(CONFFILENAME).conf
 
 setup:
 	@echo "Detected $(KERNEL)";\
+	mkdir $(LIB) $(OBJ) $(BUILD) $(CONF) > /dev/null 2>&1;\
 	LIBEXT=so;\
 	LIBPATH=LD_LIBRARY_PATH;\
 	MAINEXT=elf;\
@@ -34,8 +37,8 @@ setup:
 		LIBPATH=DYLD_LIBRARY_PATH;\
 		MAINEXT=app;\
 	fi&&\
-	echo "$(LIBEXT)=$$LIBEXT" > $(CONFFILENAME).conf;\
-	echo "$(MAINEXT)=$$MAINEXT" >> $(CONFFILENAME).conf
+	echo "$(LIBEXT)=$$LIBEXT" > $(CONF)/$(CONFFILENAME).conf;\
+	echo "$(MAINEXT)=$$MAINEXT" >> $(CONF)/$(CONFFILENAME).conf
 
 $(addsuffix .o, $(LIBNAMES)): %.o: $(SRC)//%.c
 	@echo "Compiling $*"
@@ -50,26 +53,23 @@ $(addprefix build_, $(LIBNAMES)): build_%: %.o
 	$(CC) $(CFLAGS) $(OBJ)/$< -o $(LIB)/lib$*.$($(LIBEXT)) -shared -fPIC -Iinclude
 
 build_all_libs: $(addprefix build_, $(LIBNAMES))
+	@sudo mkdir /usr/lib/$(PROJECTNAME) 2> /dev/null;\
+	sudo cp $(LIB)/* /usr/lib/$(PROJECTNAME)
 
 build_$(MAIN): $(MAIN).o build_all_libs
 	@echo "Building $(MAIN)"
-	$(CC) $(CFLAGS) $(OBJ)/$(MAIN).o -o $(BUILD)/$(MAIN).$($(MAINEXT)) -I$(INCLUDE) -L$(LIB) $(addsuffix .$($(LIBEXT)), $(addprefix $(LIB)/lib, $(LIBNAMES))) $(LDLIST)
+	$(CC) $(CFLAGS) $(OBJ)/$(MAIN).o -o $(BUILD)/$(MAIN).$($(MAINEXT)) -L$(LIB) -I$(INCLUDE) $(addprefix $(LIB)/lib, $(addsuffix .$(LIBEXTSAVE), $(LIBNAMES))) $(LDLIST)
 
 run: build_$(MAIN)
-	@echo "Setting path variables";\
-	uname -s | grep _NT > /dev/null && \
-	PATH="$$PATH;$(shell pwd)/$(LIB)" && \
-	echo "$$PATH";\
-	echo "Path set successfully";\
 	echo "Running $(MAIN)" && \
 	($(BUILD)/$(MAIN).$($(MAINEXT)) $(ARGS)) || \
 	echo "Execution failed"
 
 clean:
 	@echo "Cleaning"
-	rm -f $(OBJ)/*
-	rm -f $(LIB)/*
-	rm -f $(BUILD)/*
-	rm -f $(CONFFILENAME).conf
+	rm -rf $(OBJ)/*
+	rm -rf $(LIB)/*
+	rm -rf $(BUILD)/*
+	rm -rf $(CONF)/*
 
 $(V).SILENT:
